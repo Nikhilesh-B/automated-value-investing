@@ -19,6 +19,9 @@ class StockPricePredictor:
         self.training_data_prices = None
         self.testing_data_prices = None
         self.optimizer = None
+        self.undervalued_stocks = dict()
+        self.mean_absolute_relative_error = None
+        self.cumulative_relative_errors = 0
 
     def ingest_data(self, file_name):
         stock_data = preprocess_data(file_name)
@@ -27,8 +30,8 @@ class StockPricePredictor:
         self.testing_data_tickers = stock_test_data['Ticker']
         self.training_data_prices = stock_train_data['Price']
         self.testing_data_prices = stock_test_data['Price']
-        self.training_data = stock_train_data.drop(columns=['Ticker','Price'])
-        self.testing_data = stock_test_data.drop(columns=['Ticker','Price'])
+        self.training_data = stock_train_data.drop(columns=['Ticker', 'Price'])
+        self.testing_data = stock_test_data.drop(columns=['Ticker', 'Price'])
 
         self.training_data = self.training_data.astype(float)
         self.training_data_prices = self.training_data_prices.astype(float)
@@ -41,6 +44,8 @@ class StockPricePredictor:
         self.testing_data_prices = self.testing_data_prices.to_numpy()
         self.testing_data = self.testing_data.to_numpy()
 
+        self.testing_data_tickers = self.testing_data_tickers.to_numpy().tolist()
+
     def initialize_network(self):
         input_len = len(self.training_data[0])
         self.network = keras.Sequential([
@@ -52,12 +57,12 @@ class StockPricePredictor:
         self.optimizer = tf.keras.optimizers.Adagrad(learning_rate=0.01)
 
     def train_network(self):
-        for index, row in enumerate(self.training_data):
-            ticker_data = tf.convert_to_tensor(row)
-            ticker_data = tf.reshape(ticker_data, [1, len(ticker_data)])
+        for index, security_data in enumerate(self.training_data):
+            security_data = tf.convert_to_tensor(security_data)
+            security_data = tf.reshape(security_data, [1, len(security_data)])
 
             with tf.GradientTape() as tape:
-                predicted_price = self.network(ticker_data)
+                predicted_price = self.network(security_data)
                 actual_price = self.training_data_prices[index]
 
                 price_difference = actual_price-predicted_price
@@ -65,3 +70,37 @@ class StockPricePredictor:
 
             grads = tape.gradient(loss, self.network.trainable_variables)
             self.optimizer.apply_gradients(zip(grads, self.network.trainable_variables))
+
+    @staticmethod
+    def relative_error(predicted_price, actual_price):
+        price_difference = predicted_price-actual_price
+        percentage_difference = tf.math.divide(price_difference, actual_price)*100
+        percentage_difference = percentage_difference.numpy()[0][0]
+        return percentage_difference
+
+    def test_network(self):
+        for index, security_data in enumerate(self.testing_data):
+            security_data = tf.convert_to_tensor(security_data)
+            security_data = tf.reshape(security_data, [1, len(security_data)])
+
+            predicted_price = self.network(security_data)
+            actual_price = self.testing_data_prices[index]
+            ticker = self.testing_data_tickers[index]
+            relative_error = self.relative_error(predicted_price, actual_price)
+
+            self.cumulative_relative_errors += abs(relative_error)
+
+            if predicted_price < actual_price:
+                self.undervalued_stocks[ticker] = relative_error
+
+    def print_undervalued_stocks(self):
+        for ticker, relative_difference in self.undervalued_stocks.items():
+            relative_difference = abs(relative_difference)
+            print("Undervalued Stock: "+ticker, "Predicted upside potential = "+str(relative_difference))
+
+    def compute_mean_absolute_relative_error(self):
+        total_test_stocks = len(self.testing_data)
+        self.mean_absolute_relative_error = self.cumulative_relative_errors/total_test_stocks
+
+    def print_mean_absolute_relative_error(self):
+        print("Mean absolute relative error of network =", self.mean_absolute_relative_error)
