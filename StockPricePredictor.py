@@ -26,6 +26,9 @@ class StockPricePredictor:
         self.training_data = stock_train_data.drop(columns=['Ticker'])
         self.testing_data = stock_test_data.drop(columns=['Ticker'])
 
+        self.training_data = self.training_data.astype(float)
+        self.testing_data = self.testing_data.astype(float)
+
     def initialize_model(self):
         input_len = len(self.training_data.iloc[[0]])
         self.model = keras.Sequential([
@@ -35,13 +38,15 @@ class StockPricePredictor:
             layers.Dense(1, name="output")
         ])
 
-    '''Now you would want to insert the training data into the model and check to see the output. We need to then pass this dataPoint to the model '''
+    '''Now you would want to insert the training data into the model 
+        and check to see the output. We need to then pass this dataPoint to the model '''
 
     def train_model(self):
-        for row in self.training_data.itertuples():
-            print(row)
+        for index, row in enumerate(self.training_data.to_numpy()):
+            print("index=", index)
             dataPoint = tf.convert_to_tensor(row)
-            print(dataPoint)
+            print("datapoint=", dataPoint)
+
 
 
 
