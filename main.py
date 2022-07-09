@@ -3,7 +3,8 @@ from StockPricePredictor import StockPricePredictor
 
 if __name__ == "__main__":
     requester = StockDataRequester()
-    requester.get_stock_data("IBM")
+    requester.get_fundamental_data("BOX")
+    requester.get_balance_sheet_data("BOX")
 
     '''
     predictor = StockPricePredictor()
