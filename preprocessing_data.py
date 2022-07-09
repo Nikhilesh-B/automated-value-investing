@@ -16,6 +16,3 @@ def preprocess_data(filename):
     stock_data = shuffle(stock_data)
 
     return stock_data
-
-
-
