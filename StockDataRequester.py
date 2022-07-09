@@ -1,4 +1,5 @@
 import requests
+import csv
 from pprint import pprint
 
 class StockDataRequester:
@@ -13,7 +14,6 @@ class StockDataRequester:
         url = self.format_api_key("OVERVIEW", ticker)
         r = requests.get(url)
         data = r.json()
-        #EPS, ForwardPE, PEGRatio, PERatio, DividendPerShare
 
         valuation_ratios = {"eps": "EPS", "forward_pe": "ForwardPE", "peg_ratio": "PEGRatio",
                             "pe_ratio": "PERatio", "dividend_per_share": "DividendPerShare"}
@@ -22,38 +22,65 @@ class StockDataRequester:
             if valuation_ratios[ratio] != "None":
                 valuation_ratios[ratio] = float(data[valuation_ratios[ratio]])
             else:
-                valuation_ratios = None
-                break
+                return None
 
         return valuation_ratios
 
     def get_balance_sheet_data(self, ticker: str) -> (dict):
-        #In annual reports, fictionary one of a list of dicitonaries
-        #totalAssets,totalCurrentAssets, totalCurrentLiabilities,cashAndCashEquivalentsAtCarryingValue,totalShareholdersEquity
         url = self.format_api_key("BALANCE_SHEET", ticker)
         r = requests.get(url)
         data = r.json()
-
         prev_year_bs_data = data["annualReports"][0]
 
-        assets = prev_year_bs_data["totalAssets"]
-        current_assets = prev_year_bs_data["totalCurrentAssets"]
-        current_liabilities = prev_year_bs_data["totalCurrentLiabilities"]
-        owners_equity = prev_year_bs_data["totalShareholdersEquity"]
+        balance_sheet_data = {"assets":"totalAssets",
+                              "current_assets":"totalCurrentAssets",
+                              "current_liabilities":"totalCurrentLiabilities",
+                              "owners_equity":"totalShareholdersEquity",
+                              "debt":"totalDebt"
+                              }
 
-        assets, current_assets, current_liabilities, owners_equity = \
-            float(assets), float(current_assets), float(current_liabilities), float(owners_equity)
+        for stat in balance_sheet_data:
+            if balance_sheet_data[stat] != None:
+                balance_sheet_data[stat] = float(prev_year_bs_data[balance_sheet_data[stat]])
+            else:
+                return None
 
-        liquidity= current_assets/current_liabilities
-        debt_to_equity = current_liabilities/owners_equity
+        liquidity = balance_sheet_data["current_assets"]/balance_sheet_data["current_liabilities"]
+        debt_to_equity = balance_sheet_data["owners_equity"]/balance_sheet_data["debt"]
 
-        financial_ratios = {"liquidity_ratio":liquidity,
-                            "debt_to_equity":debt_to_equity}
+        balance_sheet_data["liquidity"]= liquidity
+        balance_sheet_data["debt_to_equity"] = debt_to_equity
 
-        return financial_ratios
+        return balance_sheet_data
+
+    def write_data(self, filename: str, tickers: list):
+        with open(filename, 'w', newline='') as csvfile:
+            headers = ["Ticker", "eps", "forward_pe", "peg_ratio", "pe_ratio", "dividend_per_share"]
+            csvwriter = csv.DictWriter(filename, fieldnames=headers)
+            csvwriter.writeheader()
+            for ticker in tickers:
+                valuation_ratios = self.get_fundamental_data(ticker)
+                balance_sheet_data = self.get_balance_sheet_data(ticker)
+
+                important_data = {**valuation_ratios, **balance_sheet_data, **{"Ticker": ticker}}
+                csvwriter.writeheader()
+
+        csvfile.close()
 
 
 
 
-        pprint(data)
+
+
+
+
+
+
+
+        pass
+
+
+
+
+
 
