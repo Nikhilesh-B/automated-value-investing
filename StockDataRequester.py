@@ -30,12 +30,26 @@ class StockDataRequester:
 
         return valuation_ratios
 
+    def get_price_data(self, ticker: str)-> dict:
+        url = self.format_api_key("GLOBAL_QUOTE", ticker)
+        r = requests.get(url)
+        data = r.json()
+        pricing_data = data['Global Quote']
+        price = pricing_data['05. price']
+
+        if price== "None":
+            return None
+
+        else:
+            pricing_data = {"price":price}
+            return pricing_data
     def get_balance_sheet_data(self, ticker: str) -> (dict):
         url = self.format_api_key("BALANCE_SHEET", ticker)
         r = requests.get(url)
         data = r.json()
+        pprint(data)
         try:
-            prev_year_bs_data = data["annualReports"][0]
+            prev_year_bs_data = data["quarterlyReports"][0]
 
             balance_sheet_data = {"assets": "totalAssets",
                                   "current_assets": "totalCurrentAssets",
@@ -70,8 +84,9 @@ class StockDataRequester:
             for ticker in tickers:
                 valuation_ratios = self.get_fundamental_data(ticker)
                 balance_sheet_data = self.get_balance_sheet_data(ticker)
-                if(balance_sheet_data != None and valuation_ratios!=None):
-                    important_data = {**valuation_ratios, **balance_sheet_data, **{"Ticker": ticker}}
+                pricing_data = self.get_price_data(ticker)
+                if(balance_sheet_data != None and valuation_ratios!=None and pricing_data != None):
+                    important_data = {**valuation_ratios, **balance_sheet_data, **{"Ticker": ticker}, **pricing_data}
                     pprint(important_data)
                     important_data = {k: important_data[k] for k in important_data if k in headers}
                     csvwriter.writerow(important_data)
