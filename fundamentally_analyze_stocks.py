@@ -1,5 +1,4 @@
 from StockPricePredictor import StockPricePredictor
-
 if __name__ == "__main__":
     predictor = StockPricePredictor(test_size=0.15)
     predictor.ingest_data("fundamental_stock_data")
