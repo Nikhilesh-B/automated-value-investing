@@ -9,7 +9,7 @@ from sklearn.model_selection import train_test_split
 
 
 class StockPricePredictor:
-    def __init__(self):
+    def __init__(self, test_size):
         self.network = None
         self.data = None
         self.training_data = None
@@ -22,16 +22,17 @@ class StockPricePredictor:
         self.undervalued_stocks = dict()
         self.mean_absolute_relative_error = None
         self.cumulative_relative_errors = 0
+        self.test_size = 0.1
 
     def ingest_data(self, file_name):
         stock_data = preprocess_data(file_name)
-        stock_train_data, stock_test_data = train_test_split(stock_data, test_size=0.1)
+        stock_train_data, stock_test_data = train_test_split(stock_data, test_size=self.test_size)
         self.training_data_tickers = stock_train_data['Ticker']
         self.testing_data_tickers = stock_test_data['Ticker']
-        self.training_data_prices = stock_train_data['Price']
-        self.testing_data_prices = stock_test_data['Price']
-        self.training_data = stock_train_data.drop(columns=['Ticker', 'Price'])
-        self.testing_data = stock_test_data.drop(columns=['Ticker', 'Price'])
+        self.training_data_prices = stock_train_data['price']
+        self.testing_data_prices = stock_test_data['price']
+        self.training_data = stock_train_data.drop(columns=['Ticker', 'price'])
+        self.testing_data = stock_test_data.drop(columns=['Ticker', 'price'])
 
         self.training_data = self.training_data.astype(float)
         self.training_data_prices = self.training_data_prices.astype(float)
