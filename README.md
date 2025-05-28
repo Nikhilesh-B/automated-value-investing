@@ -1,4 +1,4 @@
-# TensorflowCustomLossFunction
+# Value investing powered by modern machine learning
 Working on developing a simple custom loss function for basic value investing application.
 Investing like Warren Buffet using Neural Networks 
 
